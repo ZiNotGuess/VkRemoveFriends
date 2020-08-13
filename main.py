@@ -1,24 +1,24 @@
+import configparser
 import time
 import requests
 from datetime import datetime
-from SettingsReader import settingsReader
 
 
 class Vk:
-    def __init__(self, token, Version):
+    def __init__(self, token: str, version: str):
         """
         :param token: access_token пользователя
-        :param Version: версия API
+        :param version: версия API
         """
         self.url = 'https://api.vk.com/method/'
         self.access_token = token
-        self.apiVersion = Version
+        self.apiVersion = version
 
-    def method(self, methodName, methodParams=None):
+    def method(self, methodName: str, methodParams: dict = None) -> dict or list or str or int:
         """
-        :param methodName: имя метода
+        :param methodName: название метода
         :param methodParams: параметры метода
-        :return: ответ сервера
+        :return: ответ ВКонтакте
         """
         if methodParams is None:
             methodParams = {}
@@ -31,7 +31,19 @@ class Vk:
         return r_json['response']
 
 
-def right_case(t, text_forms):
+config = configparser.ConfigParser()
+config.read("settings.ini")
+
+
+def settingsReader(arg: str) -> str:
+    """
+    :param arg: имя параметра из настроек
+    :return: значение
+    """
+    return config["Vk"][arg]
+
+
+def right_case(t: int, text_forms: list) -> str:
     """
     :param t: число
     :param text_forms: массив
@@ -48,8 +60,8 @@ def right_case(t, text_forms):
     return text_forms[2]
 
 
-deleteMessage = "Привет. Это сообщение прислал тебе бот от моего лица.\n" \
-                "Мы долго не общались, поэтому боту пришлось удались тебя из друзей😶"
+deleteMessage = "Привет. Это сообщение прислал тебе скрипт от моего лица.\n" \
+                "Мы долго не общались, поэтому скрипту пришлось удались тебя из друзей😶"
 userCountRemove = 0
 
 access_token = settingsReader("access_token")
@@ -71,7 +83,7 @@ for i in userFriendsListID:
     try:
         lastMessageId = vk.method("messages.getConversationsById", {"peer_ids": i['id']})['items'][0]['last_message_id']
     except Exception:
-        print("Произошла ошибка! Бот останавливается на 5 секунд")
+        print("Произошла ошибка! Скрипт останавливается на 5 секунд и пропускает пользователя")
         time.sleep(5)
         continue
     if lastMessageId == 0:
@@ -80,25 +92,23 @@ for i in userFriendsListID:
         try:
             lastMessageTime = vk.method("messages.getById", {"message_ids": lastMessageId})['items'][0]['date']
         except Exception:
-            print("Произошла ошибка! Бот останавливается на 5 секунд")
+            print("Произошла ошибка! Скрипт останавливается на 5 секунд и пропускает пользователя")
             time.sleep(5)
             continue
 
     if lastMessageTime < unixTime:
-        answer = input(f"Удалить {i['first_name']} {i['last_name']} (https://vk.com/{i['domain']}) из друзей? ")
-        if answer.lower() == "y":
+        removeUser = input(f"Удалить {i['first_name']} {i['last_name']} (https://vk.com/{i['domain']}) из друзей? ")
+        if removeUser.lower() == "y":
             userCountRemove += 1
             print("Пользователь удалён из друзей!")
             try:
                 vk.method("messages.send", {"user_id": i['id'], "message": deleteMessage, "random_id": 0})
             except Exception:
-                print("Произошла ошибка! Бот останавливается на 5 секунд")
-                time.sleep(5)
-                continue
+                pass
             try:
                 vk.method("friends.delete", {"user_id": i['id']})
             except Exception:
-                print("Произошла ошибка! Бот останавливается на 5 секунд")
+                print("Произошла ошибка! Скрипт останавливается на 5 секунд и пропускает пользователя")
                 time.sleep(5)
                 continue
 
